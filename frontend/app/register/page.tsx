@@ -23,7 +23,6 @@ export default function RegisterPage() {
       }
 
       const data = await res.json();
-
       localStorage.setItem("token", data.accessToken);
 
       alert("Успешная регистрация!");
@@ -59,10 +58,7 @@ export default function RegisterPage() {
           required
         />
 
-        <button
-          type="submit"
-          className="w-full bg-black text-white p-2"
-        >
+        <button type="submit" className="w-full bg-black text-white p-2">
           Зарегистрироваться
         </button>
       </form>

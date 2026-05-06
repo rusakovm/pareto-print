@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { register } from "@/lib/api";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -9,12 +8,27 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
     try {
-      const data = await register(email, password);
+      const res = await fetch("http://localhost:3000/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.message || "Ошибка регистрации");
+      }
+
       localStorage.setItem("token", data.accessToken);
       alert("Успешная регистрация!");
     } catch (err) {
       alert("Ошибка регистрации");
+      console.error(err);
     }
   }
 
@@ -32,6 +46,7 @@ export default function RegisterPage() {
           className="w-full border p-2"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          required
         />
 
         <input
@@ -40,9 +55,10 @@ export default function RegisterPage() {
           className="w-full border p-2"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          required
         />
 
-        <button className="w-full bg-black text-white p-2">
+        <button type="submit" className="w-full bg-black text-white p-2">
           Зарегистрироваться
         </button>
       </form>

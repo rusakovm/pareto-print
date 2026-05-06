@@ -1,76 +1,52 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+function ResetPasswordContent() {
+  const searchParams = useSearchParams();
 
-function extractErrorMessage(data: any) {
-  if (!data) return "Ошибка";
-  if (typeof data.message === "string") return data.message;
-  if (Array.isArray(data.message)) return data.message.join("\n");
-  return "Ошибка";
-}
+  const [code, setCode] = useState(searchParams.get("code") || "");
+  const [password, setPassword] = useState("");
 
-export default function ResetPage() {
-  const sp = useSearchParams();
-  const router = useRouter();
-
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const e = sp.get("email");
-    if (e) setEmail(e);
-  }, [sp]);
-
-  async function onSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
 
     try {
-      const res = await fetch(`${API}/auth/reset-password`, {
+      const res = await fetch("http://localhost:3000/auth/reset-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code, newPassword }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          code,
+          newPassword: password,
+        }),
       });
 
-      const data = await res.json().catch(() => null);
-
       if (!res.ok) {
-        alert(extractErrorMessage(data));
-        return;
+        throw new Error("Ошибка сброса пароля");
       }
 
-      alert("Пароль изменён. Теперь войдите.");
-      router.push("/login");
-    } catch {
-      alert("Ошибка сети");
-    } finally {
-      setLoading(false);
+      alert("Пароль успешно изменён!");
+    } catch (err) {
+      alert("Ошибка сброса пароля");
+      console.error(err);
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <form onSubmit={onSubmit} className="w-full max-w-sm border rounded-lg p-6 space-y-4">
+    <div className="min-h-screen flex items-center justify-center">
+      <form
+        onSubmit={handleSubmit}
+        className="p-6 border rounded-lg w-80 space-y-4"
+      >
         <h1 className="text-xl font-bold">Сброс пароля</h1>
 
         <input
-          type="email"
-          placeholder="Email"
-          className="w-full border p-2 rounded"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-
-        <input
           type="text"
-          placeholder="Код из Telegram"
-          className="w-full border p-2 rounded"
+          placeholder="Код"
+          className="w-full border p-2"
           value={code}
           onChange={(e) => setCode(e.target.value)}
           required
@@ -79,29 +55,24 @@ export default function ResetPage() {
         <input
           type="password"
           placeholder="Новый пароль"
-          className="w-full border p-2 rounded"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
+          className="w-full border p-2"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           required
-          minLength={6}
         />
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-black text-white p-2 rounded disabled:opacity-60"
-        >
-          {loading ? "Сбрасываю..." : "Сбросить пароль"}
-        </button>
-
-        <button
-          type="button"
-          className="w-full border p-2 rounded"
-          onClick={() => router.push("/forgot")}
-        >
-          Получить новый код
+        <button type="submit" className="w-full bg-black text-white p-2">
+          Изменить пароль
         </button>
       </form>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="p-8">Загрузка...</div>}>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }
