@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    container_name: pareto_db
+    environment:
+      POSTGRES_USER: pareto
+      POSTGRES_PASSWORD: pareto_pass
+      POSTGRES_DB: pareto_print
+    ports:
+      - "5432:5432"
+    volumes:
+      - pareto_pgdata:/var/lib/postgresql/data
+
+volumes:
+  pareto_pgdata:
