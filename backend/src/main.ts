@@ -28,10 +28,11 @@ async function bootstrap() {
     credentials: true,
   });
 
-  const port = Number(process.env.PORT) || 3000;
+  const port = process.env.PORT || 3000;
 
   await app.listen(port, "0.0.0.0");
-  console.log(`API running on http://0.0.0.0:${port}`);
+
+  console.log(`API running on port ${port}`);
 }
 
 bootstrap();
