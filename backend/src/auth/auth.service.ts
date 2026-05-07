@@ -107,4 +107,28 @@ export class AuthService {
     const accessToken = this.jwt.sign({ sub: userId, email, roles });
     return { accessToken };
   }
+
+  async getMe(userId: number) {
+  const user = await this.prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      roles: {
+        include: {
+          role: true,
+        },
+      },
+    },
+  });
+
+  if (!user) throw new UnauthorizedException();
+
+  return {
+    id: user.id,
+    email: user.email,
+    roles: user.roles.map((ur) => ur.role.name),
+    telegramLinked: Boolean(user.telegramChatId),
+  };
 }
+
+}
+

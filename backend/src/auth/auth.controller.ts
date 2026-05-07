@@ -32,9 +32,10 @@ export class AuthController {
     return this.auth.resetPassword(dto.email, dto.code, dto.newPassword);
   }
 
-  @UseGuards(AuthGuard('jwt'))
-  @Get('me')
-  me(@Req() req: any) {
-    return req.user;
+@UseGuards(AuthGuard("jwt"))
+@Get("me")
+  async me(@Req() req: any) {
+    const user = await this.auth.getMe(req.user.id);
+    return user;
   }
 }

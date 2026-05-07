@@ -1,22 +1,25 @@
-import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
-import { AuthService } from './auth.service';
-import { AuthController } from './auth.controller';
-import { UsersModule } from '../users/users.module';
-import { JwtStrategy } from './jwt.strategy';
-import { TelegramModule } from '../telegram/telegram.module'; // ✅
+import { Module } from "@nestjs/common";
+import { JwtModule } from "@nestjs/jwt";
+import { PassportModule } from "@nestjs/passport";
+import { AuthController } from "./auth.controller";
+import { AuthService } from "./auth.service";
+import { JwtStrategy } from "./jwt.strategy";
+import { UsersModule } from "../users/users.module";
+import { PrismaService } from "../prisma/prisma.service";
+import { TelegramModule } from "../telegram/telegram.module";
 
 @Module({
   imports: [
     UsersModule,
-    TelegramModule, // ✅ вот это нужно
+    PassportModule,
     JwtModule.register({
-      secret: process.env.JWT_ACCESS_SECRET,
-      signOptions: { expiresIn: (process.env.JWT_ACCESS_EXPIRES_IN || '15m') as any },
+      secret: process.env.JWT_SECRET || "SUPER_SECRET",
+      signOptions: { expiresIn: "7d" },
     }),
+    TelegramModule,
   ],
-  providers: [AuthService, JwtStrategy],
   controllers: [AuthController],
+  providers: [AuthService, JwtStrategy, PrismaService],
+  exports: [AuthService],
 })
 export class AuthModule {}

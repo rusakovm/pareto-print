@@ -8,33 +8,42 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const router = useRouter();
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+async function handleSubmit(e: React.FormEvent) {
+  e.preventDefault();
 
-    try {
-      const res = await fetch("http://localhost:3000/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
+  try {
+    const res = await fetch("http://localhost:3000/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error("Ошибка входа");
-      }
-
-      localStorage.setItem("token", data.accessToken);
-
-      alert("Успешный вход!");
-      router.push("/profile");
-
-    } catch (err) {
-      alert("Ошибка входа");
+    if (!res.ok) {
+      alert(data?.message || "Ошибка входа");
+      return;
     }
+
+    if (!data.accessToken) {
+      alert("Backend не вернул accessToken");
+      console.log("LOGIN RESPONSE:", data);
+      return;
+    }
+
+    localStorage.setItem("token", data.accessToken);
+
+    console.log("SAVED TOKEN:", data.accessToken);
+
+    alert("Успешный вход!");
+    router.push("/shop");
+  } catch (err) {
+    console.error(err);
+    alert("Ошибка входа");
   }
+}
 
   return (
     <div className="min-h-screen flex items-center justify-center">

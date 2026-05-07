@@ -1,21 +1,44 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
-import { TelegramService } from './telegram.service';
-import { AuthGuard } from '@nestjs/passport';
+import {
+  Body,
+  Controller,
+  Delete,
+  Post,
+  Req,
+  UnauthorizedException,
+  UseGuards,
+} from "@nestjs/common";
+import { AuthGuard } from "@nestjs/passport";
+import { TelegramService } from "./telegram.service";
 
-@Controller('telegram')
+@Controller("telegram")
 export class TelegramController {
   constructor(private telegram: TelegramService) {}
 
-  // 1) получить код привязки (только для залогиненного)
-  @UseGuards(AuthGuard('jwt'))
-  @Post('link-code')
+  @UseGuards(AuthGuard("jwt"))
+  @Post("link-code")
   async linkCode(@Req() req: any) {
-    const userId = req.user?.sub;
+    const userId = Number(req.user?.id ?? req.user?.userId ?? req.user?.sub);
+
+    if (!userId) {
+      throw new UnauthorizedException("Не удалось определить пользователя");
+    }
+
     return this.telegram.createLinkCodeForUser(userId);
   }
 
-  // 2) webhook от Telegram
-  @Post('webhook')
+@UseGuards(AuthGuard("jwt"))
+@Delete("unlink")
+async unlink(@Req() req: any) {
+  const userId = Number(req.user?.id ?? req.user?.userId ?? req.user?.sub);
+
+  if (!userId) {
+    throw new UnauthorizedException("Не удалось определить пользователя");
+  }
+
+  return this.telegram.unlinkTelegram(userId);
+}
+
+  @Post("webhook")
   async webhook(@Body() update: any) {
     return this.telegram.handleTelegramUpdate(update);
   }

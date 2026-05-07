@@ -1,4 +1,3 @@
-// src/app/shop/page.tsx
 "use client";
 
 import Link from "next/link";
@@ -6,41 +5,21 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type Lang = "RU" | "EN";
 
-type HeroSlide = {
-  id: string;
+type DbProduct = {
+  id: number;
   title: string;
-  subtitle: string;
-  img: string; // /shop/hero/...
-  badge?: string;
+  author: string | null;
+  description: string | null;
+  price: number;
+  image: string;
+  category: string;
+  cover: string;
+  stock: string;
+  isHero: boolean;
+  isMerch: boolean;
 };
 
-type Book = {
-  id: string;
-  title: string;
-  author: string;
-  price: number;
-  currency: "RUB";
-  cover: "hard" | "soft";
-  stock: "in" | "preorder" | "out";
-  category:
-    | "Новинки"
-    | "Художественная"
-    | "Нон-фикшн"
-    | "Детская"
-    | "Поэзия"
-    | "Бизнес"
-    | "Скидки";
-  tags: string[];
-  img: string; // /shop/books/...
-};
-
-type MerchItem = {
-  id: string;
-  title: string;
-  price: number;
-  img: string; // /shop/merch/...
-  badge?: string;
-};
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 
 export default function ShopPage() {
   const [lang, setLang] = useState<Lang>("RU");
@@ -49,6 +28,7 @@ export default function ShopPage() {
 
   useEffect(() => {
     if (!audioRef.current) return;
+
     if (musicOn) {
       audioRef.current.volume = 0.25;
       audioRef.current.loop = true;
@@ -60,12 +40,10 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen bg-black text-white overflow-x-hidden">
-      {/* фон */}
       <div className="pointer-events-none fixed inset-0">
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/25 to-black/80" />
       </div>
 
-      {/* header */}
       <header className="fixed top-0 left-0 right-0 z-50">
         <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
@@ -87,6 +65,12 @@ export default function ShopPage() {
             </button>
             <Link href="/profile" className="text-sm px-3 py-2 rounded-xl bg-white text-black hover:opacity-90 transition">
               {lang === "RU" ? "Профиль" : "Profile"}
+            </Link>
+            <Link href="/cart" className="text-sm px-3 py-2 rounded-xl hover:bg-white/10 transition">
+              {lang === "RU" ? "Корзина" : "Cart"}
+            </Link>
+            <Link href="/favorites" className="text-sm px-3 py-2 rounded-xl hover:bg-white/10 transition">
+              {lang === "RU" ? "Избранное" : "Favorites"}
             </Link>
           </nav>
 
@@ -126,19 +110,32 @@ export default function ShopPage() {
 /* ----------------------------- HERO SLIDER ----------------------------- */
 
 function HeroShopSlider({ lang }: { lang: Lang }) {
-  const slides = HERO_SLIDES;
-
-  const bgUrl = "/shop/main.jpg";
-
-  
-
+  const [slides, setSlides] = useState<DbProduct[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<DbProduct | null>(null);
   const [active, setActive] = useState(0);
   const [hovered, setHovered] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const bigRef = useRef<HTMLDivElement | null>(null);
   const miniRef = useRef<HTMLDivElement | null>(null);
 
-  const clampIndex = (i: number) => (i + slides.length) % slides.length;
+  useEffect(() => {
+    fetch(`${API}/products/hero`)
+      .then((res) => res.json())
+      .then((data: DbProduct[]) => {
+        setSlides(data);
+        setActive(0);
+      })
+      .catch((err) => console.error("Ошибка загрузки hero:", err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const bgUrl = slides[active]?.image || "/shop/main.jpg";
+
+  const clampIndex = (i: number) => {
+    if (!slides.length) return 0;
+    return (i + slides.length) % slides.length;
+  };
 
   const scrollToIndex = (idx: number, behavior: ScrollBehavior = "smooth") => {
     const big = bigRef.current;
@@ -153,14 +150,16 @@ function HeroShopSlider({ lang }: { lang: Lang }) {
   };
 
   const go = (dir: -1 | 1) => {
+    if (!slides.length) return;
+
     const next = clampIndex(active + dir);
     setActive(next);
     scrollToIndex(next);
   };
 
-  // автопрокрутка
   useEffect(() => {
-    if (hovered) return;
+    if (hovered || slides.length <= 1) return;
+
     const t = setInterval(() => {
       setActive((prev) => {
         const next = (prev + 1) % slides.length;
@@ -168,162 +167,104 @@ function HeroShopSlider({ lang }: { lang: Lang }) {
         return next;
       });
     }, 5000);
+
     return () => clearInterval(t);
   }, [hovered, slides.length]);
 
-  // синхронизация при ручном скролле большого блока
-  useEffect(() => {
-    const el = bigRef.current;
-    if (!el) return;
+  if (loading) {
+    return (
+      <section className="w-full">
+        <div className="mx-auto max-w-6xl px-4 py-20 text-white/60">Загрузка верхнего слайдера...</div>
+      </section>
+    );
+  }
 
-    let raf = 0;
-    const onScroll = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const children = Array.from(el.querySelectorAll<HTMLElement>("[data-hero-big]"));
-        if (!children.length) return;
-
-        const rect = el.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-
-        let bestIdx = 0;
-        let bestDist = Infinity;
-
-        children.forEach((ch) => {
-          const r = ch.getBoundingClientRect();
-          const chCenter = r.left + r.width / 2;
-          const dist = Math.abs(chCenter - centerX);
-          const idx = Number(ch.dataset.heroBig ?? 0);
-          if (dist < bestDist) {
-            bestDist = dist;
-            bestIdx = idx;
-          }
-        });
-
-        if (bestIdx !== active) {
-          setActive(bestIdx);
-          const mini = miniRef.current;
-          const miniChild = mini?.querySelector<HTMLElement>(`[data-hero-mini="${bestIdx}"]`);
-          miniChild?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-        }
-      });
-    };
-
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      el.removeEventListener("scroll", onScroll as any);
-      cancelAnimationFrame(raf);
-    };
-  }, [active]);
+  if (!slides.length) {
+    return (
+      <section className="w-full">
+        <div className="mx-auto max-w-6xl px-4 py-20">
+          <div className="text-3xl md:text-4xl font-semibold">{lang === "RU" ? "Товары / Магазин" : "Shop"}</div>
+          <div className="mt-3 rounded-3xl border border-white/10 bg-white/5 p-6 text-white/60">
+            {lang === "RU"
+              ? "Верхний слайдер пуст. В админке отметь товар галочкой «Показывать в верхнем слайдере»."
+              : "Hero slider is empty. Mark products as Hero in admin panel."}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="w-full">
       <div className="mx-auto max-w-6xl px-4">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <div className="text-3xl md:text-4xl font-semibold">
-              {lang === "RU" ? "Товары / Магазин" : "Shop"}
-            </div>
+            <div className="text-3xl md:text-4xl font-semibold">{lang === "RU" ? "Товары / Магазин" : "Shop"}</div>
             <div className="mt-1 text-sm md:text-base text-white/70">
-              {lang === "RU"
-                ? "Готовые книги в наличии • подборки • новинки"
-                : "Books in stock • collections • new arrivals"}
+              {lang === "RU" ? "Готовые книги в наличии • подборки • новинки" : "Books in stock • collections • new arrivals"}
             </div>
           </div>
 
           <div className="hidden md:flex items-center gap-2">
-            <button
-              onClick={() => go(-1)}
-              className="h-11 w-11 rounded-2xl border border-white/15 bg-white/10 hover:bg-white/15 transition"
-              aria-label="Prev"
-            >
+            <button onClick={() => go(-1)} className="h-11 w-11 rounded-2xl border border-white/15 bg-white/10 hover:bg-white/15 transition">
               ←
             </button>
-            <button
-              onClick={() => go(1)}
-              className="h-11 w-11 rounded-2xl border border-white/15 bg-white/10 hover:bg-white/15 transition"
-              aria-label="Next"
-            >
+            <button onClick={() => go(1)} className="h-11 w-11 rounded-2xl border border-white/15 bg-white/10 hover:bg-white/15 transition">
               →
             </button>
           </div>
         </div>
       </div>
 
-      {/* шапка */}
       <div className="mt-6" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
         <div className="relative">
-         {/* BACKGROUND (меняется по активному слайду) */}
-            <div className="pointer-events-none absolute inset-0">
+          <div className="pointer-events-none absolute inset-0">
             <div
-                className="absolute inset-0 transition-opacity duration-700"
+              className="absolute inset-0 transition-opacity duration-700"
               style={{
-                backgroundImage: bgUrl ? `url(${bgUrl})` : undefined,
+                backgroundImage: `url(${bgUrl})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
-                opacity: bgUrl ? 0.35 : 0, // можешь 0.25–0.5
-                filter: "none",
-                transform: "none",
-                }}
+                opacity: 0.35,
+              }}
             />
-            {/* затемнение + градиенты */}
             <div className="absolute inset-0 bg-black/55" />
             <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/15 to-black/70" />
-            </div>
+          </div>
 
           <div className="relative">
-            {/* большие стрелки */}
             <div className="absolute left-2 top-1/2 -translate-y-1/2 z-20 hidden md:block">
-              <button
-                onClick={() => go(-1)}
-                className="h-12 w-12 rounded-full bg-white text-black shadow hover:opacity-90 transition"
-                aria-label="Prev"
-              >
+              <button onClick={() => go(-1)} className="h-12 w-12 rounded-full bg-white text-black shadow hover:opacity-90 transition">
                 ‹
               </button>
             </div>
+
             <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 hidden md:block">
-              <button
-                onClick={() => go(1)}
-                className="h-12 w-12 rounded-full bg-white text-black shadow hover:opacity-90 transition"
-                aria-label="Next"
-              >
+              <button onClick={() => go(1)} className="h-12 w-12 rounded-full bg-white text-black shadow hover:opacity-90 transition">
                 ›
               </button>
             </div>
 
-            {/* BIG */}
-            <div
-              ref={bigRef}
-              className="noScrollBar w-full overflow-x-auto flex gap-6 px-4 md:px-10 scroll-smooth"
-              style={{ scrollSnapType: "x mandatory", scrollbarGutter: "stable" as any }}
-            >
+            <div ref={bigRef} className="noScrollBar w-full overflow-x-auto flex gap-6 px-4 md:px-10 scroll-smooth" style={{ scrollSnapType: "x mandatory" }}>
               {slides.map((s, idx) => (
-                <div
-                  key={s.id}
-                  data-hero-big={idx}
-                  className="shrink-0 w-[92vw] md:w-[540px] lg:w-[600px]"
-                  style={{ scrollSnapAlign: "center" }}
-                >
+                <div key={s.id} data-hero-big={idx} className="shrink-0 w-[92vw] md:w-[540px] lg:w-[600px]" style={{ scrollSnapAlign: "center" }}>
                   <div className="rounded-[28px] overflow-hidden">
                     <div className="relative">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={s.img} alt="" className="h-[320px] md:h-[360px] w-full object-cover" />
+                      <img src={s.image} alt="" className="h-[320px] md:h-[360px] w-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
-                      {s.badge ? (
-                        <div className="absolute left-5 top-5 text-xs px-3 py-1.5 rounded-full bg-white text-black">
-                          {s.badge}
-                        </div>
-                      ) : null}
+                      <div className="absolute left-5 top-5 text-xs px-3 py-1.5 rounded-full bg-white text-black">HERO</div>
                     </div>
 
                     <div className="p-5 md:p-6 flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <div className="text-lg md:text-xl font-semibold truncate">{s.title}</div>
-                        <div className="mt-1 text-sm text-white/70 truncate">{s.subtitle}</div>
+                        <div className="mt-1 text-sm text-white/70 truncate">{s.description || s.author || s.category}</div>
                       </div>
 
-                      <button className="shrink-0 px-4 py-2 rounded-2xl bg-white text-black hover:opacity-90 transition">
+                      <button
+                        onClick={() => setSelectedProduct(s)}
+                        className="shrink-0 px-4 py-2 rounded-2xl bg-white text-black hover:opacity-90 transition"
+                      >
                         {lang === "RU" ? "Смотреть" : "Open"}
                       </button>
                     </div>
@@ -332,7 +273,6 @@ function HeroShopSlider({ lang }: { lang: Lang }) {
               ))}
             </div>
 
-            {/* dots */}
             <div className="mt-4 flex items-center justify-center gap-2">
               {slides.map((_, i) => (
                 <button
@@ -341,23 +281,16 @@ function HeroShopSlider({ lang }: { lang: Lang }) {
                     setActive(i);
                     scrollToIndex(i);
                   }}
-                  className={`h-2.5 rounded-full transition-all ${
-                    i === active ? "w-10 bg-white" : "w-2.5 bg-white/35 hover:bg-white/60"
-                  }`}
-                  aria-label={`Go ${i + 1}`}
+                  className={`h-2.5 rounded-full transition-all ${i === active ? "w-10 bg-white" : "w-2.5 bg-white/35 hover:bg-white/60"}`}
                 />
               ))}
             </div>
 
-            {/* MINI */}
             <div className="mt-4 pb-6">
-              <div
-                ref={miniRef}
-                className="noScrollBar w-full overflow-x-auto flex gap-6 px-4 md:px-10 scroll-smooth"
-                style={{ scrollSnapType: "x mandatory", scrollbarGutter: "stable" as any }}
-              >
+              <div ref={miniRef} className="noScrollBar w-full overflow-x-auto flex gap-6 px-4 md:px-10 scroll-smooth" style={{ scrollSnapType: "x mandatory" }}>
                 {slides.map((s, idx) => {
                   const on = idx === active;
+
                   return (
                     <button
                       key={s.id}
@@ -366,19 +299,14 @@ function HeroShopSlider({ lang }: { lang: Lang }) {
                         setActive(idx);
                         scrollToIndex(idx);
                       }}
-                      className={`shrink-0 rounded-2xl border transition ${
-                        on ? "border-white bg-white/12" : "border-white/10 bg-white/5 hover:bg-white/10"
-                      }`}
+                      className={`shrink-0 rounded-2xl border transition ${on ? "border-white bg-white/12" : "border-white/10 bg-white/5 hover:bg-white/10"}`}
                       style={{ scrollSnapAlign: "center" }}
                     >
                       <div className="w-[160px] md:w-[190px] p-2">
                         <div className="rounded-xl overflow-hidden border border-white/10 bg-black/20">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={s.img} alt="" className="h-16 w-full object-cover" />
+                          <img src={s.image} alt="" className="h-16 w-full object-cover" />
                         </div>
-                        <div className={`mt-2 text-xs truncate ${on ? "text-white" : "text-white/70"}`}>
-                          {s.title}
-                        </div>
+                        <div className={`mt-2 text-xs truncate ${on ? "text-white" : "text-white/70"}`}>{s.title}</div>
                       </div>
                     </button>
                   );
@@ -386,23 +314,23 @@ function HeroShopSlider({ lang }: { lang: Lang }) {
               </div>
 
               <div className="mt-2 text-center text-xs text-white/45">
-                {lang === "RU"
-                  ? "Большой и маленький скроллы связаны • автопереключение каждые 5 секунд"
-                  : "Big and small sliders are synced • autoplay every 5 seconds"}
+                {lang === "RU" ? "Данные слайдера загружаются из БД по признаку isHero" : "Slider data is loaded from DB by isHero flag"}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ✅ скрытие скроллбаров (Chrome/Safari/Edge/Firefox) */}
+      {selectedProduct ? <ProductModal product={selectedProduct} lang={lang} onClose={() => setSelectedProduct(null)} /> : null}
+
       <style jsx global>{`
         .noScrollBar {
-          -ms-overflow-style: none; /* IE/Edge legacy */
-          scrollbar-width: none; /* Firefox */
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
+
         .noScrollBar::-webkit-scrollbar {
-          display: none; /* Chrome/Safari */
+          display: none;
         }
       `}</style>
     </section>
@@ -412,16 +340,35 @@ function HeroShopSlider({ lang }: { lang: Lang }) {
 /* ------------------------------ MERCH SECTION ------------------------------ */
 
 function MerchSection({ lang }: { lang: Lang }) {
-  const items = MERCH_ITEMS;
-
+  const [items, setItems] = useState<DbProduct[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<DbProduct | null>(null);
   const [active, setActive] = useState(0);
+  const [loading, setLoading] = useState(true);
+
   const trackRef = useRef<HTMLDivElement | null>(null);
 
-  const clampIndex = (i: number) => (i + items.length) % items.length;
+  useEffect(() => {
+    fetch(`${API}/products/merch`)
+      .then((res) => res.json())
+      .then((data: DbProduct[]) => {
+        setItems(data);
+        setActive(0);
+      })
+      .catch((err) => console.error("Ошибка загрузки мерча:", err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const clampIndex = (i: number) => {
+    if (!items.length) return 0;
+    return (i + items.length) % items.length;
+  };
 
   const go = (dir: -1 | 1) => {
+    if (!items.length) return;
+
     const next = clampIndex(active + dir);
     setActive(next);
+
     const el = trackRef.current?.querySelector<HTMLElement>(`[data-merch="${next}"]`);
     el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   };
@@ -434,124 +381,120 @@ function MerchSection({ lang }: { lang: Lang }) {
         <div className="relative z-10 mx-auto max-w-6xl px-4">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <div className="text-2xl md:text-3xl font-semibold">
-                {lang === "RU" ? "Мерч / фирменные штуки" : "Merch"}
-              </div>
+              <div className="text-2xl md:text-3xl font-semibold">{lang === "RU" ? "Мерч / фирменные штуки" : "Merch"}</div>
               <div className="mt-1 text-sm md:text-base text-white/70">
-                {lang === "RU"
-                  ? "Стикеры, закладки, открытки, наборы — для бренда и настроения"
-                  : "Stickers, bookmarks, postcards, bundles — for branding and vibes"}
+                {lang === "RU" ? "Товары из базы данных с признаком isMerch" : "Products loaded from database by isMerch flag"}
               </div>
             </div>
 
             <div className="hidden md:flex items-center gap-2">
-              <button
-                onClick={() => go(-1)}
-                className="h-11 w-11 rounded-2xl border border-white/15 bg-white/10 hover:bg-white/15 transition"
-                aria-label="Prev merch"
-              >
+              <button onClick={() => go(-1)} className="h-11 w-11 rounded-2xl border border-white/15 bg-white/10 hover:bg-white/15 transition">
                 ←
               </button>
-              <button
-                onClick={() => go(1)}
-                className="h-11 w-11 rounded-2xl border border-white/15 bg-white/10 hover:bg-white/15 transition"
-                aria-label="Next merch"
-              >
+              <button onClick={() => go(1)} className="h-11 w-11 rounded-2xl border border-white/15 bg-white/10 hover:bg-white/15 transition">
                 →
               </button>
             </div>
           </div>
 
-          <div className="mt-6 relative">
-            <div className="absolute left-2 top-1/2 -translate-y-1/2 z-20 md:hidden">
-              <button
-                onClick={() => go(-1)}
-                className="h-10 w-10 rounded-full bg-white text-black hover:opacity-90 transition"
-                aria-label="Prev merch"
-              >
-                ‹
-              </button>
-            </div>
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 md:hidden">
-              <button
-                onClick={() => go(1)}
-                className="h-10 w-10 rounded-full bg-white text-black hover:opacity-90 transition"
-                aria-label="Next merch"
-              >
-                ›
-              </button>
-            </div>
+          {loading ? <div className="mt-6 text-white/60">Загрузка мерча...</div> : null}
 
-            <div
-              ref={trackRef}
-              className="noScrollBar overflow-x-auto flex gap-4 px-2 md:px-8 py-2 scroll-smooth"
-              style={{ scrollSnapType: "x mandatory" }}
-            >
-              {items.map((m, idx) => {
-                const on = idx === active;
-                return (
-                  <button
-                    key={m.id}
-                    data-merch={idx}
-                    onClick={() => setActive(idx)}
-                    className={`shrink-0 rounded-[24px] border transition text-left ${
-                      on ? "border-white bg-white/12" : "border-white/10 bg-white/5 hover:bg-white/10"
-                    }`}
-                    style={{ scrollSnapAlign: "center" }}
-                  >
-                    <div className="w-[280px] md:w-[340px]">
-                      <div className="p-3">
-                        <div className="rounded-2xl overflow-hidden border border-white/10 bg-black/20">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={m.img} alt="" className="h-[170px] md:h-[190px] w-full object-cover" />
-                        </div>
+          {!loading && items.length === 0 ? (
+            <div className="mt-6 rounded-3xl border border-white/10 bg-white/5 p-6 text-white/60">
+              {lang === "RU" ? "Мерч пуст. В админке отметь товар галочкой «Это мерч»." : "Merch is empty. Mark products as merch in admin panel."}
+            </div>
+          ) : null}
 
-                        <div className="mt-3 flex items-start justify-between gap-3">
-                          <div>
-                            <div className="text-sm font-semibold">{m.title}</div>
-                            <div className="mt-1 text-xs text-white/70">{formatRUB(m.price)}</div>
+          {items.length > 0 ? (
+            <div className="mt-6 relative">
+              <div ref={trackRef} className="noScrollBar overflow-x-auto flex gap-4 px-2 md:px-8 py-2 scroll-smooth" style={{ scrollSnapType: "x mandatory" }}>
+                {items.map((m, idx) => {
+                  const on = idx === active;
+
+                  return (
+                    <div
+                      key={m.id}
+                      data-merch={idx}
+                      className={`shrink-0 rounded-[24px] border transition text-left ${
+                        on ? "border-white bg-white/12" : "border-white/10 bg-white/5 hover:bg-white/10"
+                      }`}
+                      style={{ scrollSnapAlign: "center" }}
+                    >
+                      <div className="w-[280px] md:w-[340px] p-3">
+                        <button
+                          onClick={() => {
+                            setActive(idx);
+                            setSelectedProduct(m);
+                          }}
+                          className="block w-full text-left"
+                        >
+                          <div className="rounded-2xl overflow-hidden border border-white/10 bg-black/20">
+                            <img src={m.image} alt="" className="h-[170px] md:h-[190px] w-full object-cover" />
                           </div>
 
-                          {m.badge ? (
-                            <div className="text-[11px] px-2 py-1 rounded-full bg-white text-black">
-                              {m.badge}
+                          <div className="mt-3 flex items-start justify-between gap-3">
+                            <div>
+                              <div className="text-sm font-semibold">{m.title}</div>
+                              <div className="mt-1 text-xs text-white/70">{formatRUB(m.price)}</div>
                             </div>
-                          ) : null}
+                            <div className="text-[11px] px-2 py-1 rounded-full bg-white text-black">MERCH</div>
+                          </div>
+                        </button>
+
+                        <div className="mt-4 flex gap-2">
+                          <button
+                            onClick={() => addToCart(m.id)}
+                            className="flex-1 px-3 py-2 rounded-2xl bg-white text-black text-sm hover:opacity-90 transition"
+                          >
+                            {lang === "RU" ? "В корзину" : "Add"}
+                          </button>
+                          <button
+                            onClick={() => addToFavorites(m.id)}
+                            className="px-3 py-2 rounded-2xl bg-white/10 border border-white/15 hover:bg-white/15 transition"
+                          >
+                            ♡
+                          </button>
+                          <button
+                            onClick={() => setSelectedProduct(m)}
+                            className="px-3 py-2 rounded-2xl bg-white/10 border border-white/15 hover:bg-white/15 transition text-sm"
+                          >
+                            Подробнее
+                          </button>
                         </div>
                       </div>
                     </div>
-                  </button>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
 
-            <div className="mt-4 flex items-center justify-center gap-2">
-              {items.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => {
-                    setActive(i);
-                    const el = trackRef.current?.querySelector<HTMLElement>(`[data-merch="${i}"]`);
-                    el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-                  }}
-                  className={`h-2.5 rounded-full transition-all ${
-                    i === active ? "w-10 bg-white" : "w-2.5 bg-white/35 hover:bg-white/60"
-                  }`}
-                  aria-label={`Merch ${i + 1}`}
-                />
-              ))}
+              <div className="mt-4 flex items-center justify-center gap-2">
+                {items.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setActive(i);
+                      const el = trackRef.current?.querySelector<HTMLElement>(`[data-merch="${i}"]`);
+                      el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+                    }}
+                    className={`h-2.5 rounded-full transition-all ${i === active ? "w-10 bg-white" : "w-2.5 bg-white/35 hover:bg-white/60"}`}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
 
         <div className="h-10" />
       </div>
+
+      {selectedProduct ? <ProductModal product={selectedProduct} lang={lang} onClose={() => setSelectedProduct(null)} /> : null}
     </section>
   );
 }
 
 function RibbonBackground() {
   const line = "СПЕЦИАЛЬНОЕ СОДЕРЖИМОЕ • PARETO PRINT • ";
+
   return (
     <div className="pointer-events-none absolute inset-0">
       <div className="absolute inset-0 bg-gradient-to-r from-[#7c3aed]/30 via-[#a855f7]/20 to-[#7c3aed]/30" />
@@ -562,11 +505,13 @@ function RibbonBackground() {
           <div className="ribbonText">{line.repeat(20)}</div>
         </div>
       </div>
+
       <div className="absolute left-0 right-0 top-28 h-12 overflow-hidden opacity-55">
         <div className="ribbon ribbon-b">
           <div className="ribbonText">{line.repeat(20)}</div>
         </div>
       </div>
+
       <div className="absolute left-0 right-0 top-46 h-12 overflow-hidden opacity-45">
         <div className="ribbon ribbon-c">
           <div className="ribbonText">{line.repeat(20)}</div>
@@ -584,6 +529,7 @@ function RibbonBackground() {
           background: rgba(255, 255, 255, 0.05);
           backdrop-filter: blur(8px);
         }
+
         .ribbonText {
           white-space: nowrap;
           font-weight: 700;
@@ -592,18 +538,23 @@ function RibbonBackground() {
           opacity: 0.22;
           animation: move 18s linear infinite;
         }
+
         .ribbon-a .ribbonText {
           animation-duration: 18s;
         }
+
         .ribbon-b .ribbonText {
           animation-duration: 22s;
         }
+
         .ribbon-c .ribbonText {
           animation-duration: 26s;
         }
+
         .ribbon-b {
           transform: skewY(1.5deg);
         }
+
         .ribbon-c {
           transform: skewY(-1deg);
         }
@@ -612,6 +563,7 @@ function RibbonBackground() {
           0% {
             transform: translateX(0);
           }
+
           100% {
             transform: translateX(-50%);
           }
@@ -624,12 +576,9 @@ function RibbonBackground() {
 /* ------------------------------ SHOP GRID ------------------------------ */
 
 function ShopGridSection({ lang }: { lang: Lang }) {
-  const all = BOOKS;
-
-  const categories = useMemo(() => {
-    const set = new Set(all.map((b) => b.category));
-    return Array.from(set);
-  }, [all]);
+  const [all, setAll] = useState<DbProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState<DbProduct | null>(null);
 
   const [q, setQ] = useState("");
   const [selectedCats, setSelectedCats] = useState<string[]>([]);
@@ -637,25 +586,33 @@ function ShopGridSection({ lang }: { lang: Lang }) {
   const [cover, setCover] = useState<"all" | "hard" | "soft">("all");
   const [sort, setSort] = useState<"popular" | "price_asc" | "price_desc" | "new">("popular");
 
+  useEffect(() => {
+    fetch(`${API}/products`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Ошибка загрузки товаров");
+        return res.json();
+      })
+      .then((data: DbProduct[]) => setAll(data.filter((item) => !item.isMerch)))
+      .catch((err) => console.error("Ошибка загрузки товаров:", err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const categories = useMemo(() => {
+    const set = new Set(all.map((b) => b.category));
+    return Array.from(set);
+  }, [all]);
+
   const filtered = useMemo(() => {
     let items = [...all];
 
     if (q.trim()) {
       const s = q.trim().toLowerCase();
-      items = items.filter((b) => (b.title + " " + b.author).toLowerCase().includes(s));
+      items = items.filter((b) => `${b.title} ${b.author ?? ""}`.toLowerCase().includes(s));
     }
 
-    if (selectedCats.length) {
-      items = items.filter((b) => selectedCats.includes(b.category));
-    }
-
-    if (stock !== "all") {
-      items = items.filter((b) => b.stock === stock);
-    }
-
-    if (cover !== "all") {
-      items = items.filter((b) => b.cover === cover);
-    }
+    if (selectedCats.length) items = items.filter((b) => selectedCats.includes(b.category));
+    if (stock !== "all") items = items.filter((b) => b.stock === stock);
+    if (cover !== "all") items = items.filter((b) => b.cover === cover);
 
     switch (sort) {
       case "price_asc":
@@ -665,9 +622,7 @@ function ShopGridSection({ lang }: { lang: Lang }) {
         items.sort((a, b) => b.price - a.price);
         break;
       case "new":
-        items.sort(
-          (a, b) => (b.category === "Новинки" ? 1 : 0) - (a.category === "Новинки" ? 1 : 0)
-        );
+        items.sort((a, b) => (b.category === "Новинки" ? 1 : 0) - (a.category === "Новинки" ? 1 : 0));
         break;
       default:
         break;
@@ -683,17 +638,13 @@ function ShopGridSection({ lang }: { lang: Lang }) {
           <div>
             <div className="text-2xl md:text-3xl font-semibold">{lang === "RU" ? "Каталог товаров" : "Catalog"}</div>
             <div className="mt-1 text-sm md:text-base text-white/70">
-              {lang === "RU" ? "Фильтры слева • карточки справа" : "Filters left • grid right"}
+              {lang === "RU" ? "Товары загружаются из базы данных PostgreSQL" : "Products are loaded from PostgreSQL database"}
             </div>
           </div>
 
           <div className="hidden md:flex items-center gap-2">
             <div className="text-sm text-white/60">{lang === "RU" ? "Сортировка:" : "Sort:"}</div>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as any)}
-              className="px-3 py-2 rounded-xl bg-white/10 border border-white/15 outline-none"
-            >
+            <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="px-3 py-2 rounded-xl bg-white/10 border border-white/15 outline-none">
               <option value="popular">{lang === "RU" ? "Популярное" : "Popular"}</option>
               <option value="new">{lang === "RU" ? "Сначала новинки" : "New first"}</option>
               <option value="price_asc">{lang === "RU" ? "Цена ↑" : "Price ↑"}</option>
@@ -714,22 +665,25 @@ function ShopGridSection({ lang }: { lang: Lang }) {
 
             <div className="mt-5 font-semibold">{lang === "RU" ? "Категории" : "Categories"}</div>
             <div className="mt-2 space-y-2">
-              {categories.map((c) => {
-                const on = selectedCats.includes(c);
-                return (
-                  <label key={c} className="flex items-center gap-2 text-sm text-white/80 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={on}
-                      onChange={() =>
-                        setSelectedCats((prev) => (on ? prev.filter((x) => x !== c) : [...prev, c]))
-                      }
-                      className="h-4 w-4"
-                    />
-                    <span>{c}</span>
-                  </label>
-                );
-              })}
+              {categories.length ? (
+                categories.map((c) => {
+                  const on = selectedCats.includes(c);
+
+                  return (
+                    <label key={c} className="flex items-center gap-2 text-sm text-white/80 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={() => setSelectedCats((prev) => (on ? prev.filter((x) => x !== c) : [...prev, c]))}
+                        className="h-4 w-4"
+                      />
+                      <span>{c}</span>
+                    </label>
+                  );
+                })
+              ) : (
+                <div className="text-sm text-white/45">Категории появятся после загрузки</div>
+              )}
             </div>
 
             <div className="mt-5 font-semibold">{lang === "RU" ? "Наличие" : "Stock"}</div>
@@ -741,12 +695,8 @@ function ShopGridSection({ lang }: { lang: Lang }) {
               ].map((x) => (
                 <button
                   key={x.id}
-                  onClick={() => setStock(x.id as any)}
-                  className={`px-3 py-2 rounded-2xl text-sm border transition ${
-                    stock === x.id
-                      ? "bg-white text-black border-white"
-                      : "bg-white/5 border-white/10 hover:bg-white/10"
-                  }`}
+                  onClick={() => setStock(x.id as typeof stock)}
+                  className={`px-3 py-2 rounded-2xl text-sm border transition ${stock === x.id ? "bg-white text-black border-white" : "bg-white/5 border-white/10 hover:bg-white/10"}`}
                 >
                   {x.label}
                 </button>
@@ -762,12 +712,8 @@ function ShopGridSection({ lang }: { lang: Lang }) {
               ].map((x) => (
                 <button
                   key={x.id}
-                  onClick={() => setCover(x.id as any)}
-                  className={`px-3 py-2 rounded-2xl text-sm border transition ${
-                    cover === x.id
-                      ? "bg-white text-black border-white"
-                      : "bg-white/5 border-white/10 hover:bg-white/10"
-                  }`}
+                  onClick={() => setCover(x.id as typeof cover)}
+                  className={`px-3 py-2 rounded-2xl text-sm border transition ${cover === x.id ? "bg-white text-black border-white" : "bg-white/5 border-white/10 hover:bg-white/10"}`}
                 >
                   {x.label}
                 </button>
@@ -789,20 +735,12 @@ function ShopGridSection({ lang }: { lang: Lang }) {
               </button>
             </div>
 
-            <div className="mt-4 text-xs text-white/50">
-              {lang === "RU"
-                ? "Это демо UI. Потом подключим реальные товары из БД."
-                : "Demo UI. Later we’ll connect real products from DB."}
-            </div>
+            <div className="mt-4 text-xs text-white/50">{lang === "RU" ? "Данные поступают через NestJS API: /products" : "Data comes from NestJS API: /products"}</div>
           </aside>
 
           <div>
             <div className="md:hidden mb-4">
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value as any)}
-                className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/15 outline-none"
-              >
+              <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/15 outline-none">
                 <option value="popular">{lang === "RU" ? "Популярное" : "Popular"}</option>
                 <option value="new">{lang === "RU" ? "Сначала новинки" : "New first"}</option>
                 <option value="price_asc">{lang === "RU" ? "Цена ↑" : "Price ↑"}</option>
@@ -811,71 +749,204 @@ function ShopGridSection({ lang }: { lang: Lang }) {
             </div>
 
             <div className="text-sm text-white/60 mb-3">
-              {lang === "RU" ? "Найдено:" : "Found:"} <b className="text-white">{filtered.length}</b>
+              {loading ? (
+                <span>{lang === "RU" ? "Загрузка товаров..." : "Loading products..."}</span>
+              ) : (
+                <>
+                  {lang === "RU" ? "Найдено:" : "Found:"} <b className="text-white">{filtered.length}</b>
+                </>
+              )}
             </div>
+
+            {!loading && filtered.length === 0 ? (
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-white/60">
+                {lang === "RU" ? "Товары не найдены. Проверь базу данных или фильтры." : "No products found. Check database or filters."}
+              </div>
+            ) : null}
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filtered.map((b) => (
-                <BookCard key={b.id} book={b} lang={lang} />
+                <BookCard key={b.id} book={b} lang={lang} onOpen={() => setSelectedProduct(b)} />
               ))}
             </div>
           </div>
         </div>
       </div>
+
+      {selectedProduct ? <ProductModal product={selectedProduct} lang={lang} onClose={() => setSelectedProduct(null)} /> : null}
     </section>
   );
 }
 
-function BookCard({ book, lang }: { book: Book; lang: Lang }) {
+function BookCard({ book, lang, onOpen }: { book: DbProduct; lang: Lang; onOpen: () => void }) {
   const badge =
     book.stock === "in"
       ? lang === "RU"
         ? "В наличии"
         : "In stock"
       : book.stock === "preorder"
-      ? lang === "RU"
-        ? "Предзаказ"
-        : "Preorder"
-      : lang === "RU"
-      ? "Нет"
-      : "Out";
+        ? lang === "RU"
+          ? "Предзаказ"
+          : "Preorder"
+        : lang === "RU"
+          ? "Нет"
+          : "Out";
 
   const badgeClass =
     book.stock === "in"
       ? "bg-white text-black"
       : book.stock === "preorder"
-      ? "bg-white/15 text-white border border-white/20"
-      : "bg-white/10 text-white/60 border border-white/10";
+        ? "bg-white/15 text-white border border-white/20"
+        : "bg-white/10 text-white/60 border border-white/10";
 
   return (
     <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur hover:bg-white/8 transition overflow-hidden">
-      <div className="relative">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={book.img} alt="" className="h-52 w-full object-cover" />
+      <button onClick={onOpen} className="relative block w-full text-left">
+        <img src={book.image} alt="" className="h-52 w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
         <div className={`absolute left-3 top-3 text-[11px] px-2 py-1 rounded-full ${badgeClass}`}>{badge}</div>
-      </div>
+      </button>
 
       <div className="p-4">
-        <div className="text-sm text-white/70">{book.author}</div>
-        <div className="mt-1 font-semibold leading-snug">{book.title}</div>
+        <button onClick={onOpen} className="block text-left w-full">
+          <div className="text-sm text-white/70">{book.author || "Автор не указан"}</div>
+          <div className="mt-1 font-semibold leading-snug">{book.title}</div>
+
+          {book.description ? <div className="mt-2 text-xs text-white/55 line-clamp-2">{book.description}</div> : null}
+        </button>
 
         <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-white/70">
           <span className="px-2 py-1 rounded-full bg-white/10 border border-white/10">
-            {book.cover === "hard" ? (lang === "RU" ? "Твёрдый" : "Hard") : lang === "RU" ? "Мягкий" : "Soft"}
+            {book.cover === "hard" ? (lang === "RU" ? "Твёрдый" : "Hard") : book.cover === "soft" ? (lang === "RU" ? "Мягкий" : "Soft") : book.cover}
           </span>
           <span className="px-2 py-1 rounded-full bg-white/10 border border-white/10">{book.category}</span>
         </div>
 
         <div className="mt-4 flex items-center justify-between gap-3">
           <div className="text-base font-semibold">{formatRUB(book.price)}</div>
-          <button className="px-4 py-2 rounded-2xl bg-white text-black hover:opacity-90 transition">
-            {lang === "RU" ? "В корзину" : "Add"}
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => addToCart(book.id)} className="px-4 py-2 rounded-2xl bg-white text-black hover:opacity-90 transition">
+              {lang === "RU" ? "В корзину" : "Add"}
+            </button>
+
+            <button onClick={() => addToFavorites(book.id)} className="px-3 py-2 rounded-2xl bg-white/10 border border-white/15 hover:bg-white/15 transition">
+              ♡
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
+}
+
+/* ------------------------------ MODAL / API HELPERS ------------------------------ */
+
+function ProductModal({ product, lang, onClose }: { product: DbProduct; lang: Lang; onClose: () => void }) {
+  const badge = product.isMerch ? "MERCH" : product.stock === "in" ? "В наличии" : product.stock === "preorder" ? "Предзаказ" : "Нет в наличии";
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
+
+      <div className="relative z-10 w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-[36px] border border-white/15 bg-black/95 shadow-[0_30px_120px_rgba(0,0,0,0.75)]">
+        <button onClick={onClose} className="absolute right-5 top-5 z-20 h-11 w-11 rounded-full bg-white text-black text-2xl">
+          ×
+        </button>
+
+        <div className="grid md:grid-cols-[1fr_1fr] gap-0">
+          <div className="relative min-h-[320px]">
+            <img src={product.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-black/20" />
+            <div className="absolute left-5 top-5 rounded-full bg-white text-black px-3 py-1.5 text-xs font-semibold">{badge}</div>
+          </div>
+
+          <div className="p-7 md:p-9">
+            <div className="text-sm text-white/50">{product.category}</div>
+            <h2 className="mt-2 text-3xl md:text-4xl font-semibold leading-tight">{product.title}</h2>
+
+            {product.author ? <div className="mt-2 text-white/65">{product.author}</div> : null}
+
+            <div className="mt-5 flex flex-wrap gap-2 text-xs text-white/70">
+              <span className="px-3 py-1.5 rounded-full bg-white/10 border border-white/10">{product.cover}</span>
+              <span className="px-3 py-1.5 rounded-full bg-white/10 border border-white/10">{product.stock}</span>
+              {product.isHero ? <span className="px-3 py-1.5 rounded-full bg-white/10 border border-white/10">hero</span> : null}
+              {product.isMerch ? <span className="px-3 py-1.5 rounded-full bg-white/10 border border-white/10">merch</span> : null}
+            </div>
+
+            {product.description ? <div className="mt-6 text-white/80 leading-relaxed whitespace-pre-line">{product.description}</div> : null}
+
+            <div className="mt-7 text-2xl font-semibold">{formatRUB(product.price)}</div>
+
+            <div className="mt-7 flex flex-wrap gap-3">
+              <button onClick={() => addToCart(product.id)} className="px-5 py-3 rounded-2xl bg-white text-black hover:opacity-90 transition">
+                {lang === "RU" ? "В корзину" : "Add to cart"}
+              </button>
+
+              <button onClick={() => addToFavorites(product.id)} className="px-5 py-3 rounded-2xl bg-white/10 border border-white/15 hover:bg-white/15 transition">
+                {lang === "RU" ? "В избранное" : "Favorite"}
+              </button>
+
+              <button onClick={onClose} className="px-5 py-3 rounded-2xl bg-white/10 border border-white/15 hover:bg-white/15 transition">
+                {lang === "RU" ? "Закрыть" : "Close"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+async function addToCart(productId: number) {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    alert("Сначала войдите");
+    return;
+  }
+
+  const res = await fetch(`${API}/cart/${productId}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    console.error("ADD CART ERROR:", data);
+    alert(data?.message || "Ошибка добавления в корзину");
+    return;
+  }
+
+  alert("Добавлено в корзину");
+}
+
+async function addToFavorites(productId: number) {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    alert("Сначала войдите");
+    return;
+  }
+
+  const res = await fetch(`${API}/favorites/${productId}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    console.error("ADD FAVORITE ERROR:", data);
+    alert(data?.message || "Ошибка добавления в избранное");
+    return;
+  }
+
+  alert("Добавлено в избранное");
 }
 
 /* ------------------------------ FOOTER ------------------------------ */
@@ -887,9 +958,7 @@ function SiteFooter({ lang }: { lang: Lang }) {
         <div>
           <div className="font-semibold">ООО “Прето Принт”</div>
           <div className="mt-2 text-sm text-white/70 leading-relaxed">
-            {lang === "RU"
-              ? "Печать и полиграфия • производство • магазин готовых книг."
-              : "Printing • production • shop for ready-to-buy books."}
+            {lang === "RU" ? "Печать и полиграфия • производство • магазин готовых книг." : "Printing • production • shop for ready-to-buy books."}
           </div>
         </div>
 
@@ -934,163 +1003,6 @@ function SiteFooter({ lang }: { lang: Lang }) {
     </footer>
   );
 }
-
-/* ------------------------------ DATA ------------------------------ */
-
-const HERO_SLIDES: HeroSlide[] = Array.from({ length: 16 }).map((_, i) => {
-  const n = i + 1;
-  return {
-    id: `hs${n}`,
-    title:
-      [
-        "Подборка недели: новые авторы",
-        "Переиздание: коллекционная обложка",
-        "Наборы для подарка",
-        "Премиум переплёт: серия",
-        "Лимитка: золотое тиснение",
-        "Детская подборка",
-        "Нон-фикшн недели",
-        "Поэзия и альбомы",
-        "Бизнес и маркетинг",
-        "Скидки на комплекты",
-        "Короткие рассказы",
-        "Сборники эссе",
-        "Книги с иллюстрациями",
-        "Малые тиражи",
-        "Классика в новом виде",
-        "Лучшее за месяц",
-      ][i] ?? `Слайд ${n}`,
-    subtitle:
-      [
-        "Серия малых тиражей • твёрдый переплёт",
-        "Ограниченный выпуск • в наличии",
-        "Книга + открытка + закладка",
-        "Максимум “дорого выглядит”",
-        "Обложка и корешок — вау",
-        "Добрые истории • яркие иллюстрации",
-        "Истории, факты, исследования",
-        "Стихи, артбуки, сборники",
-        "Практика, кейсы, инструменты",
-        "Экономия на популярных позициях",
-        "Лёгкое чтение • в дорогу",
-        "Идеи, мысли, вдохновение",
-        "Плотная бумага • цвет",
-        "Готовые издания небольших авторов",
-        "Дизайн/переплёт/бумага — апгрейд",
-        "Подборка самых покупаемых",
-      ][i] ?? "",
-    img: `/shop/hero/${n}.jpg`,
-    badge: i === 0 ? "NEW" : i === 1 ? "RECOMMEND" : i === 2 ? "BUNDLE" : i === 4 ? "LIMITED" : undefined,
-  };
-});
-
-const MERCH_ITEMS: MerchItem[] = [
-  { id: "m1", title: "Набор наклеек (бренд)", price: 290, img: "/shop/merch/1.jpg", badge: "NEW" },
-  { id: "m2", title: "Закладка (премиум)", price: 190, img: "/shop/merch/2.jpg" },
-  { id: "m3", title: "Открытка + конверт", price: 160, img: "/shop/merch/3.jpg" },
-  { id: "m4", title: "Подарочный набор", price: 690, img: "/shop/merch/4.jpg", badge: "HOT" },
-];
-
-const BOOKS: Book[] = [
-  {
-    id: "b1",
-    title: "Лабиринт печатника",
-    author: "И. Авторов",
-    price: 790,
-    currency: "RUB",
-    cover: "hard",
-    stock: "in",
-    category: "Новинки",
-    tags: ["серия", "бестселлер"],
-    img: "/shop/books/1.jpg",
-  },
-  {
-    id: "b2",
-    title: "Ночь на типографской улице",
-    author: "К. Писатель",
-    price: 650,
-    currency: "RUB",
-    cover: "soft",
-    stock: "preorder",
-    category: "Художественная",
-    tags: ["роман"],
-    img: "/shop/books/2.jpg",
-  },
-  {
-    id: "b3",
-    title: "Как издать книгу и не сойти с ума",
-    author: "А. Редактор",
-    price: 990,
-    currency: "RUB",
-    cover: "hard",
-    stock: "in",
-    category: "Бизнес",
-    tags: ["практика"],
-    img: "/shop/books/3.jpg",
-  },
-  {
-    id: "b4",
-    title: "Стихи на полях",
-    author: "М. Поэт",
-    price: 420,
-    currency: "RUB",
-    cover: "soft",
-    stock: "in",
-    category: "Поэзия",
-    tags: ["лирика"],
-    img: "/shop/books/4.jpg",
-  },
-  {
-    id: "b5",
-    title: "История бумаги",
-    author: "Н. Исследователь",
-    price: 860,
-    currency: "RUB",
-    cover: "hard",
-    stock: "in",
-    category: "Нон-фикшн",
-    tags: ["история"],
-    img: "/shop/books/5.jpg",
-  },
-  {
-    id: "b6",
-    title: "Сказки переплёта",
-    author: "Д. Рассказчик",
-    price: 540,
-    currency: "RUB",
-    cover: "soft",
-    stock: "out",
-    category: "Детская",
-    tags: ["детям"],
-    img: "/shop/books/6.jpg",
-  },
-  {
-    id: "b7",
-    title: "Скидочный комплект (2 книги)",
-    author: "Разные авторы",
-    price: 990,
-    currency: "RUB",
-    cover: "soft",
-    stock: "in",
-    category: "Скидки",
-    tags: ["набор"],
-    img: "/shop/books/7.jpg",
-  },
-  {
-    id: "b8",
-    title: "Каталог идей для обложек",
-    author: "Студия",
-    price: 730,
-    currency: "RUB",
-    cover: "hard",
-    stock: "preorder",
-    category: "Нон-фикшн",
-    tags: ["дизайн"],
-    img: "/shop/books/8.jpg",
-  },
-];
-
-/* ------------------------------ HELPERS ------------------------------ */
 
 function formatRUB(v: number) {
   return `${v.toLocaleString("ru-RU")} ₽`;
