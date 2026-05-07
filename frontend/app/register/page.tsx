@@ -1,16 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
     try {
-      const res = await fetch("http://localhost:3000/auth/register", {
+      const res = await fetch(`${API}/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -18,16 +22,18 @@ export default function RegisterPage() {
         body: JSON.stringify({ email, password }),
       });
 
+      const data = await res.json().catch(() => null);
+
       if (!res.ok) {
-        throw new Error("Ошибка регистрации");
+        throw new Error(data?.message || "Ошибка регистрации");
       }
 
-      const data = await res.json();
       localStorage.setItem("token", data.accessToken);
 
       alert("Успешная регистрация!");
+      router.push("/profile");
     } catch (err) {
-      alert("Ошибка регистрации");
+      alert(err instanceof Error ? err.message : "Ошибка регистрации");
       console.error(err);
     }
   }
