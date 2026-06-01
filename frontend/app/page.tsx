@@ -46,7 +46,7 @@ type Product = {
 };
 
 const SECTIONS: { id: SectionId; title: string; subtitle?: string; bg?: string }[] = [
-  { id: "hero", title: "Прето Принт", subtitle: "Печать • Полиграфия • Производство", bg: "/bg/hero.jpg" },
+  { id: "hero", title: "Парето Принт", subtitle: "Печать • Полиграфия • Производство", bg: "/bg/hero.jpg" },
   { id: "products", title: "Продукция", subtitle: "Каталог и примеры работ", bg: "/bg/products.jpg" },
   { id: "services", title: "Услуги", subtitle: "Печать, дизайн, постобработка", bg: "/bg/services.jpg" },
   { id: "team", title: "Команда", subtitle: "Карусель как в примере", bg: "/bg/team.jpg" },
@@ -250,7 +250,7 @@ export default function HomePage() {
               PP
             </div>
             <div className="leading-tight">
-              <div className="font-semibold">ООО “Прето Принт”</div>
+              <div className="font-semibold">ООО “Парето Принт”</div>
               <div className="text-xs opacity-70">презентационный интерфейс</div>
             </div>
           </Link>
@@ -313,7 +313,7 @@ export default function HomePage() {
 
       <div ref={containerRef} className="relative z-10 h-screen overflow-y-auto scroll-smooth" style={{ scrollSnapType: "y mandatory" }}>
         <VideoHeroSection
-          title={lang === "RU" ? "ПРЕТО ПРИНТ" : "PARETO PRINT"}
+          title={lang === "RU" ? "ПАРЕТО ПРИНТ" : "PARETO PRINT"}
           subtitle={lang === "RU" ? "Печать • Полиграфия • Производство" : "Printing • Production • Design"}
           ctaPrimaryText={lang === "RU" ? "Оставить заявку" : "Request"}
           ctaSecondaryText={lang === "RU" ? "Смотреть продукцию" : "View products"}
@@ -983,11 +983,11 @@ function SiteFooter() {
     <footer className="mt-12 border-t border-white/10 pt-8">
       <div className="mx-auto max-w-6xl w-full grid md:grid-cols-4 gap-6">
         <div className="md:col-span-2">
-          <div className="font-semibold text-lg">ООО “Прето Принт”</div>
+          <div className="font-semibold text-lg">ООО “Парето Принт”</div>
           <div className="mt-2 text-sm text-white/70 max-w-md leading-relaxed">
             Полиграфия и производство печатной продукции: книги, брошюры, упаковка, наклейки, корпоративные материалы. Делаем аккуратно и в срок.
           </div>
-          <div className="mt-4 text-xs text-white/50">© {new Date().getFullYear()} ООО “Прето Принт”. Все права защищены.</div>
+          <div className="mt-4 text-xs text-white/50">© {new Date().getFullYear()} ООО “Парето Принт”. Все права защищены.</div>
         </div>
         <div>
           <div className="font-semibold">Навигация</div>
