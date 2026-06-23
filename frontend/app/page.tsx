@@ -309,7 +309,7 @@ export default function HomePage() {
         </div>
       </aside>
 
-      <audio ref={audioRef} src="/audio/theme.mp3" />
+      <audio ref={audioRef} src="/audio/theme1.mp3" />
 
       <div ref={containerRef} className="relative z-10 h-screen overflow-y-auto scroll-smooth" style={{ scrollSnapType: "y mandatory" }}>
         <VideoHeroSection
