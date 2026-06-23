@@ -354,12 +354,7 @@ export default function HomePage() {
             <div className="bg-white/10 border border-white/15 rounded-3xl p-5 backdrop-blur">
               <div className="font-semibold">{lang === "RU" ? "Карта" : "Map"}</div>
               <div className="mt-3 h-56 rounded-2xl border border-white/15 bg-black/30 flex items-center justify-center text-sm text-white/60">
-                <iframe
-                  src="https://yandex.com/maps/-/CTQ4MMjp"
-                  width="100%"
-                  height="100%"
-                  frameBorder="0"
-                />
+               <iframe src="https://yandex.ru/map-widget/v1/?um=constructor%3Addc48c5dd5f88fe9c29c4ada756a18b9f98e70766409a33b1c7fbc9b3d38a965&amp;source=constructor" width="500" height="400" frameborder="0"></iframe>
               </div>
               <div className="mt-4 text-sm text-white/80 space-y-1">
                 <div>
