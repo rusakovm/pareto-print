@@ -197,7 +197,7 @@ export default function CalculatorPage() {
               PP
             </div>
             <div className="leading-tight">
-              <div className="text-[15px] font-semibold">ООО “Прето Принт”</div>
+              <div className="text-[15px] font-semibold">ООО “Парето Принт”</div>
               <div className="text-sm text-white/65">
                 {lang === "RU" ? "презентационный интерфейс" : "presentation interface"}
               </div>
@@ -205,7 +205,7 @@ export default function CalculatorPage() {
           </div>
 
           <div className="mx-auto flex w-fit items-center gap-2 rounded-[22px] border border-white/15 bg-white/10 px-2 py-1.5 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.35)]">
-            <NavItem href="/" label={lang === "RU" ? "Прето Принт" : "Preto Print"} />
+            <NavItem href="/" label={lang === "RU" ? "Парето Принт" : "Preto Print"} />
             <NavItem href="/shop" label={lang === "RU" ? "Продукция" : "Products"} />
             <NavItem href="/services" label={lang === "RU" ? "Услуги" : "Services"} />
             <NavItem href="/team" label={lang === "RU" ? "Команда" : "Team"} />
@@ -312,7 +312,7 @@ export default function CalculatorPage() {
                 <div className="w-full max-w-[230px] space-y-4">
                   <div className={`rounded-[24px] p-4 ${amberGlass}`}>
                     <div className="space-y-3">
-                      <SideMenuItem label={lang === "RU" ? "Прето Принт" : "Preto Print"} active />
+                      <SideMenuItem label={lang === "RU" ? "Парето Принт" : "Preto Print"} active />
                       <SideMenuItem label={lang === "RU" ? "Продукция" : "Products"} />
                       <SideMenuItem label={lang === "RU" ? "Услуги" : "Services"} />
                       <SideMenuItem label={lang === "RU" ? "Команда" : "Team"} />
