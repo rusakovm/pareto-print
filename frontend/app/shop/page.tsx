@@ -51,7 +51,7 @@ export default function ShopPage() {
               PP
             </div>
             <div className="leading-tight">
-              <div className="font-semibold">ООО “Прето Принт”</div>
+              <div className="font-semibold">ООО “Парето Принт”</div>
               <div className="text-xs opacity-70">{lang === "RU" ? "Магазин" : "Shop"}</div>
             </div>
           </Link>
@@ -956,7 +956,7 @@ function SiteFooter({ lang }: { lang: Lang }) {
     <footer className="mt-16 border-t border-white/10 bg-black/40">
       <div className="mx-auto max-w-6xl px-4 py-10 grid md:grid-cols-4 gap-8">
         <div>
-          <div className="font-semibold">ООО “Прето Принт”</div>
+          <div className="font-semibold">ООО “Парето Принт”</div>
           <div className="mt-2 text-sm text-white/70 leading-relaxed">
             {lang === "RU" ? "Печать и полиграфия • производство • магазин готовых книг." : "Printing • production • shop for ready-to-buy books."}
           </div>
@@ -997,7 +997,7 @@ function SiteFooter({ lang }: { lang: Lang }) {
       </div>
 
       <div className="mx-auto max-w-6xl px-4 pb-8 flex flex-col md:flex-row gap-2 md:items-center md:justify-between text-xs text-white/50">
-        <div>© {new Date().getFullYear()} ООО “Прето Принт”.</div>
+        <div>© {new Date().getFullYear()} ООО “Парето Принт”.</div>
         <div>{lang === "RU" ? "Демо интерфейс магазина" : "Shop demo UI"}</div>
       </div>
     </footer>
