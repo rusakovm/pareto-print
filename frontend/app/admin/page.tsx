@@ -124,7 +124,7 @@ export default function AdminPage() {
         <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between">
           <div>
             <div className="text-xl font-semibold">Админ-панель</div>
-            <div className="text-sm text-white/50">ООО “Прето Принт”</div>
+            <div className="text-sm text-white/50">ООО “Парето Принт”</div>
           </div>
 
           <div className="flex gap-2">
