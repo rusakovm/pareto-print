@@ -353,13 +353,13 @@ export default function HomePage() {
           <div className="grid md:grid-cols-2 gap-4 w-full max-w-5xl">
             <div className="bg-white/10 border border-white/15 rounded-3xl p-5 backdrop-blur">
               <div className="font-semibold">{lang === "RU" ? "Карта" : "Map"}</div>
-              <div className="mt-3 h-56 rounded-2xl overflow-hidden border border-white/15">
-                <iframe
-                  src="https://yandex.ru/map-widget/v1/?um=constructor%3Addc48c5dd5f88fe9c29c4ada756a18b9f98e70766409a33b1c7fbc9b3d38a965&source=constructor"
-                  className="w-full h-full"
-                  frameBorder="0"
-                />
-              </div>
+                <div className="mt-3 h-56 rounded-2xl overflow-hidden border border-white/15">
+                  <iframe
+                    src="https://yandex.ru/map-widget/v1/?um=constructor%3Addc48c5dd5f88fe9c29c4ada756a18b9f98e70766409a33b1c7fbc9b3d38a965&source=constructor"
+                    className="w-full h-full"
+                    frameBorder="0"
+                  />
+                </div>
               <div className="mt-4 text-sm text-white/80 space-y-1">
                 <div>
                   <b>{lang === "RU" ? "Адрес:" : "Address:"}</b> (впиши)
