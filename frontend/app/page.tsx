@@ -355,7 +355,7 @@ export default function HomePage() {
               <div className="font-semibold">{lang === "RU" ? "Карта" : "Map"}</div>
               <div className="mt-3 h-56 rounded-2xl border border-white/15 bg-black/30 flex items-center justify-center text-sm text-white/60">
                 <iframe
-                  src="https://yandex.com/maps/-/CTQYzHPF"
+                  src="https://yandex.com/maps/-/CTQ4MMjp"
                   width="100%"
                   height="100%"
                   frameBorder="0"
