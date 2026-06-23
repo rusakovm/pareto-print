@@ -136,7 +136,7 @@ export default function ProfilePage() {
       <header className="border-b border-white/10 bg-black/80">
         <div className="mx-auto max-w-5xl px-4 py-5 flex items-center justify-between">
           <Link href="/" className="font-semibold">
-            ООО “Прето Принт”
+            ООО “Парето Принт”
           </Link>
 
           <div className="flex gap-2">
