@@ -354,7 +354,12 @@ export default function HomePage() {
             <div className="bg-white/10 border border-white/15 rounded-3xl p-5 backdrop-blur">
               <div className="font-semibold">{lang === "RU" ? "Карта" : "Map"}</div>
               <div className="mt-3 h-56 rounded-2xl border border-white/15 bg-black/30 flex items-center justify-center text-sm text-white/60">
-                Map placeholder
+                <iframe
+                  src="https://yandex.com/maps/-/CTQYzHPF"
+                  width="100%"
+                  height="100%"
+                  frameBorder="0"
+                />
               </div>
               <div className="mt-4 text-sm text-white/80 space-y-1">
                 <div>
